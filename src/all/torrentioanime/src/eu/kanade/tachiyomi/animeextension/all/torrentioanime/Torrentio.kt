@@ -484,9 +484,23 @@ class Torrentio :
                 stream.url ?: ""
             }
 
+            val qualityTier = stream.name?.removePrefix("Torrentio\n")?.trim() ?: ""
+            val richLabel = stream.title?.let { title ->
+                title.split("\n")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .joinToString(" | ")
+            } ?: ""
+
+            val displayQuality = when {
+                richLabel.isNotEmpty() && qualityTier.isNotEmpty() -> "$qualityTier | $richLabel"
+                richLabel.isNotEmpty() -> richLabel
+                else -> qualityTier.ifEmpty { "Unknown" }
+            }
+
             Video(
                 urlOrHash,
-                ((stream.name?.removePrefix("Torrentio\n") ?: "") + "\n" + (stream.title ?: "")),
+                displayQuality,
                 urlOrHash,
             )
         }.orEmpty()
