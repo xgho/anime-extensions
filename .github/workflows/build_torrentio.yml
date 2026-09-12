@@ -26,14 +26,31 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Generate signing keystore
+        run: |
+          keytool -genkeypair \
+            -alias release \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -keystore signing.jks \
+            -storepass android \
+            -keypass android \
+            -dname "CN=xgho, OU=Personal, O=Personal, L=Unknown, ST=Unknown, C=US"
+
       - name: Build Torrentio APK
-        run: ./gradlew src:all:torrentioanime:assembleDebug
+        run: |
+          ./gradlew src:all:torrentioanime:assembleRelease \
+            -Pandroid.injected.signing.store.file=$(pwd)/signing.jks \
+            -Pandroid.injected.signing.store.password=android \
+            -Pandroid.injected.signing.key.alias=release \
+            -Pandroid.injected.signing.key.password=android
 
       - name: Prepare repo branch
         run: |
           mkdir -p repo-output
 
-          # Find the built APK
+          # Find the built APK (try release first, fall back to debug)
           APK_PATH=$(find src/all/torrentioanime/build/outputs/apk -name "*.apk" | head -1)
           if [ -z "$APK_PATH" ]; then
             echo "No APK found!"
