@@ -48,9 +48,10 @@ jobs:
 
       - name: Prepare repo branch
         run: |
-          mkdir -p repo-output
+          mkdir -p repo-output/apk
+          mkdir -p repo-output/icon
 
-          # Find the built APK (try release first, fall back to debug)
+          # Find the built APK
           APK_PATH=$(find src/all/torrentioanime/build/outputs/apk -name "*.apk" | head -1)
           if [ -z "$APK_PATH" ]; then
             echo "No APK found!"
@@ -62,19 +63,25 @@ jobs:
 
           # Use the same naming convention as yuzono's repo
           APK_NAME="aniyomi-all.torrentioanime-v14.${VERSION_CODE}.apk"
-          cp "$APK_PATH" "repo-output/$APK_NAME"
+          cp "$APK_PATH" "repo-output/apk/$APK_NAME"
 
-          # Generate index.min.json matching yuzono's format
-          cat > repo-output/index.min.json << 'INDEXEOF'
-          [{"name":"Torrentio Anime (Torrent / Debrid) - Rich Metadata","pkg":"eu.kanade.tachiyomi.animeextension.all.torrentioanime","apk":"APK_PLACEHOLDER","lang":"all","code":CODE_PLACEHOLDER,"version":"14.CODE_PLACEHOLDER","nsfw":0,"sources":[{"name":"Torrentio Anime (Torrent / Debrid)","lang":"all","id":"7490206640756700883","baseUrl":"https://torrentio.strem.fun"}]}]
-          INDEXEOF
+          # Copy icon if it exists
+          ICON_PATH="src/all/torrentioanime/res/mipmap-xxxhdpi/ic_launcher.png"
+          PKG="eu.kanade.tachiyomi.animeextension.all.torrentioanime"
+          if [ -f "$ICON_PATH" ]; then
+            cp "$ICON_PATH" "repo-output/icon/${PKG}.png"
+          fi
 
-          # Replace placeholders
-          sed -i "s|APK_PLACEHOLDER|${APK_NAME}|g" repo-output/index.min.json
-          sed -i "s|CODE_PLACEHOLDER|${VERSION_CODE}|g" repo-output/index.min.json
+          # Generate index.min.json matching AnymeX expected format
+          cat > repo-output/index.min.json << INDEXEOF
+[{"name":"Aniyomi: Torrentio Anime (Torrent / Debrid)","pkg":"eu.kanade.tachiyomi.animeextension.all.torrentioanime","apk":"${APK_NAME}","lang":"all","code":${VERSION_CODE},"version":"14.${VERSION_CODE}","nsfw":0,"hasReadme":0,"hasChangelog":0,"sources":[{"name":"Torrentio Anime (Torrent / Debrid)","lang":"all","id":"7490206640756700883","baseUrl":"https://torrentio.strem.fun"}]}]
+INDEXEOF
 
           echo "Built APK: $APK_NAME"
           echo "Version code: $VERSION_CODE"
+          echo "Repo structure:"
+          find repo-output -type f
+          echo "index.min.json contents:"
           cat repo-output/index.min.json
 
       - name: Deploy to repo branch
