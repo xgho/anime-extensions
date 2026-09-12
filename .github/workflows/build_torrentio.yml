@@ -51,31 +51,24 @@ jobs:
           mkdir -p repo-output/apk
           mkdir -p repo-output/icon
 
-          # Find the built APK
           APK_PATH=$(find src/all/torrentioanime/build/outputs/apk -name "*.apk" | head -1)
           if [ -z "$APK_PATH" ]; then
             echo "No APK found!"
             exit 1
           fi
 
-          # Read version info from build.gradle
           VERSION_CODE=$(grep 'extVersionCode' src/all/torrentioanime/build.gradle | grep -o '[0-9]*')
 
-          # Use the same naming convention as yuzono's repo
           APK_NAME="aniyomi-all.torrentioanime-v14.${VERSION_CODE}.apk"
           cp "$APK_PATH" "repo-output/apk/$APK_NAME"
 
-          # Copy icon if it exists
           ICON_PATH="src/all/torrentioanime/res/mipmap-xxxhdpi/ic_launcher.png"
           PKG="eu.kanade.tachiyomi.animeextension.all.torrentioanime"
           if [ -f "$ICON_PATH" ]; then
             cp "$ICON_PATH" "repo-output/icon/${PKG}.png"
           fi
 
-          # Generate index.min.json matching AnymeX expected format
-          cat > repo-output/index.min.json << INDEXEOF
-[{"name":"Aniyomi: Torrentio Anime (Torrent / Debrid)","pkg":"eu.kanade.tachiyomi.animeextension.all.torrentioanime","apk":"${APK_NAME}","lang":"all","code":${VERSION_CODE},"version":"14.${VERSION_CODE}","nsfw":0,"hasReadme":0,"hasChangelog":0,"sources":[{"name":"Torrentio Anime (Torrent / Debrid)","lang":"all","id":"7490206640756700883","baseUrl":"https://torrentio.strem.fun"}]}]
-INDEXEOF
+          printf '[{"name":"Aniyomi: Torrentio Anime (Torrent / Debrid)","pkg":"eu.kanade.tachiyomi.animeextension.all.torrentioanime","apk":"%s","lang":"all","code":%s,"version":"14.%s","nsfw":0,"hasReadme":0,"hasChangelog":0,"sources":[{"name":"Torrentio Anime (Torrent / Debrid)","lang":"all","id":"7490206640756700883","baseUrl":"https://torrentio.strem.fun"}]}]' "$APK_NAME" "$VERSION_CODE" "$VERSION_CODE" > repo-output/index.min.json
 
           echo "Built APK: $APK_NAME"
           echo "Version code: $VERSION_CODE"
