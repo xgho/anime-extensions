@@ -1,0 +1,70 @@
+name: Build Torrentio Extension
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'src/all/torrentioanime/**'
+      - '.github/workflows/build_torrentio.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Torrentio APK
+        run: ./gradlew src:all:torrentioanime:assembleDebug
+
+      - name: Prepare repo branch
+        run: |
+          mkdir -p repo-output
+
+          # Find the built APK
+          APK_PATH=$(find src/all/torrentioanime/build/outputs/apk -name "*.apk" | head -1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found!"
+            exit 1
+          fi
+
+          # Read version info from build.gradle
+          VERSION_CODE=$(grep 'extVersionCode' src/all/torrentioanime/build.gradle | grep -o '[0-9]*')
+
+          # Use the same naming convention as yuzono's repo
+          APK_NAME="aniyomi-all.torrentioanime-v14.${VERSION_CODE}.apk"
+          cp "$APK_PATH" "repo-output/$APK_NAME"
+
+          # Generate index.min.json matching yuzono's format
+          cat > repo-output/index.min.json << 'INDEXEOF'
+          [{"name":"Torrentio Anime (Torrent / Debrid) - Rich Metadata","pkg":"eu.kanade.tachiyomi.animeextension.all.torrentioanime","apk":"APK_PLACEHOLDER","lang":"all","code":CODE_PLACEHOLDER,"version":"14.CODE_PLACEHOLDER","nsfw":0,"sources":[{"name":"Torrentio Anime (Torrent / Debrid)","lang":"all","id":"7490206640756700883","baseUrl":"https://torrentio.strem.fun"}]}]
+          INDEXEOF
+
+          # Replace placeholders
+          sed -i "s|APK_PLACEHOLDER|${APK_NAME}|g" repo-output/index.min.json
+          sed -i "s|CODE_PLACEHOLDER|${VERSION_CODE}|g" repo-output/index.min.json
+
+          echo "Built APK: $APK_NAME"
+          echo "Version code: $VERSION_CODE"
+          cat repo-output/index.min.json
+
+      - name: Deploy to repo branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./repo-output
+          publish_branch: repo
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
